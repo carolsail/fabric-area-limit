@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>fabricjs area limit demo</title>
+	<script src="js/fabric.min.js"></script>
+	<style>
+	canvas {
+		border: 1px solid;
+	}
+	</style>
+</head>
+<body>
+	<div>
+	   <canvas id="c" width="1000" height="600"></canvas>
+	</div>
+
+
+
+	<script type="text/javascript">
+		var c = new fabric.Canvas("c");
+		var cw = c.width;
+		var ch = c.height;
+		var lineTop = lineLeft = lineRight = lineBottom = null;
+
+		fabric.Image.fromURL('img/bg.jpg', function(img){
+			img.scale(0.5);
+			img.top = (ch-img.height*0.5)/2;
+			img.left = (cw-img.width*0.5)/2;
+			c.setBackgroundImage(img);
+			c.renderAll();
+
+			//border init
+			var bh = img.height*0.5 * (3/5);
+			var bw = img.width*0.5 * (2/5);
+			var bl = (cw-bw)/2;
+			var bt = (ch-bh)/2;
+
+			lineTop = new fabric.Line([bl, bt, bl+bw, bt],{
+				stroke:"red", 
+				strokeWidth:1, 
+				hasBorders:false, 
+				hasControls:false, 
+				hasRotatingPoint:false, 
+				selectable:false
+			})
+			lineLeft = new fabric.Line([bl, bt, bl, bt+bh],{
+				stroke:"red", 
+				strokeWidth:1, 
+				hasBorders:false, 
+				hasControls:false, 
+				hasRotatingPoint:false, 
+				selectable:false
+			})
+			lineBottom = new fabric.Line([bl, bt+bh, bl+bw, bt+bh],{
+				stroke:"red", 
+				strokeWidth:1, 
+				hasBorders:false, 
+				hasControls:false, 
+				hasRotatingPoint:false, 
+				selectable:false
+			})
+			lineRight = new fabric.Line([bl+bw, bt, bl+bw, bt+bh],{
+				stroke:"red", 
+				strokeWidth:1, 
+				hasBorders:false, 
+				hasControls:false, 
+				hasRotatingPoint:false, 
+				selectable:false
+			})
+		});
+
+		var moving = new fabric.Rect({
+		  width: 100,
+		  height: 100,
+		  top:(ch-100)/2,
+		  left:(cw-100)/2
+		});
+		c.add(moving);
+
+		var text = new fabric.Text('123', { 
+	    	top: (ch-100)/2-50,
+            left: (cw-100)/2
+	     });
+	    c.add(text);
+
+		c.on({
+			'selection:created': addLine,
+			'selection:cleared': removeLine,
+			'object:moving': borderLimit,
+			'object:scaling': borderLimit,
+			'object:rotating': borderLimit,
+			'after:render': render
+		})
+
+		c.onBeforeScaleRotate = function lock(object) { 
+			object.set({
+				lockScalingX: false,
+        		lockScalingY: false
+			})
+		}
+
+		function addLine(){
+			c.add(lineTop,lineLeft,lineRight,lineBottom);
+			c.renderAll();
+		}
+
+		function removeLine(){
+			c.remove(lineTop,lineLeft,lineRight,lineBottom);
+			c.renderAll();
+		}
+
+		function borderLimit(e){
+		  var obj = e.target;
+		  obj.setCoords();
+		  var bl = lineLeft.left;
+		  var br = lineRight.left;
+		  var bt = lineTop.top;
+		  var bb = lineBottom.top;
+
+		  var ol = obj.getBoundingRect().left;
+		  var ow = obj.getBoundingRect().width;
+		  var ot = obj.getBoundingRect().top;
+		  var oh = obj.getBoundingRect().height;
+
+		  //尺寸过大
+		  if(oh > (bb-bt) || ow > (br-bl)){
+		  	obj.set({
+		  		lockScalingX: true,
+        		lockScalingY: true
+		  	})
+		  	//return;
+		  }
+
+		  var px = py = 0;
+		  if(obj.angle>=0 && obj.angle<=90){
+		  	px = obj.aCoords.tl.x - obj.aCoords.bl.x;
+		  	py = obj.aCoords.tl.y - obj.aCoords.tl.y;
+		  }
+		  if(obj.angle>90 && obj.angle<=180){
+		  	px = obj.aCoords.tl.x - obj.aCoords.br.x;
+		  	py = obj.aCoords.tl.y - obj.aCoords.bl.y;
+		  }
+		  if(obj.angle>180 && obj.angle<=270){
+		  	px = obj.aCoords.tl.x - obj.aCoords.tr.x;
+		  	py = obj.aCoords.tl.y - obj.aCoords.br.y;
+		  }
+		  if(obj.angle>270 && obj.angle<=360){
+			px = obj.aCoords.tl.x - obj.aCoords.tl.x;
+			py = obj.aCoords.tl.y - obj.aCoords.tr.y;
+		  }
+		  obj.left = Math.min(Math.max(bl + px, ol + px), br - ow + px);
+		  obj.top = Math.min(Math.max(bt + py, ot + py), bb - oh + py);
+		}
+
+		function render(){
+		  // c.contextContainer.strokeStyle = '#555';
+		  // var ao = c.getActiveObject();
+		  // if (ao) {
+		  //   var bound = ao.getBoundingRect();
+		  //   c.contextContainer.strokeRect(
+		  //     bound.left,
+		  //     bound.top,
+		  //     bound.width,
+		  //     bound.height
+		  //   );
+		  // }
+		}
+	</script>
+</body>
+</html>
